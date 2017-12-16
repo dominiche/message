@@ -70,7 +70,7 @@ public class Consumer {
     private void closeResource() {
         log.debug("关闭rabbit连接..........");
 
-        channelList.forEach(channel -> {
+        channelList.parallelStream().forEach(channel -> {
             try {
                 channel.close();
             } catch (Exception e) {
