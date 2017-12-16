@@ -25,6 +25,7 @@ import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.regex.Pattern;
 
 /**
@@ -35,6 +36,8 @@ import java.util.regex.Pattern;
 public class Consumer {
 
     private static Connection connection;
+
+    private List<Channel> channelList = new Vector<>();
 
     @Autowired(required = false)
     private List<RabbitMessageConsumer> consumers = Lists.newArrayList();
@@ -55,12 +58,36 @@ public class Consumer {
 
     @PostConstruct
     public void init() {
+        Runtime.getRuntime().addShutdownHook(new Thread(this::closeResource));
+
         if (CollectionUtils.isEmpty(consumers)) {
             log.warn("rabbitMessageConsumers is zero!");
             return;
         }
+        assembleConsumer();
+    }
 
-        consumers.forEach(consumer -> {
+    private void closeResource() {
+        log.debug("关闭rabbit连接..........");
+
+        channelList.forEach(channel -> {
+            try {
+                channel.close();
+            } catch (Exception e) {
+                log.error("channel关闭异常：{}", channel, e);
+            }
+        });
+
+        try {
+            connection.close();
+        } catch (IOException e) {
+            log.error("rabbit connection关闭异常", e);
+        }
+    }
+
+    private void assembleConsumer() {
+        log.debug("开始装配 rabbit-message consumer..........");
+        consumers.parallelStream().forEach(consumer -> {
             Class clazz;
             boolean isList = false;
             boolean isSet = false;
@@ -119,6 +146,7 @@ public class Consumer {
             }
 
             Channel channel = newChannel(); //todo close channel
+            channelList.add(channel);
             try {
                 //declare exchange
                 if (!RabbitConstants.DEFAULT_EXCHANGE.equals(exchange)) {

@@ -70,4 +70,38 @@ public class SimpleTest {
         String string = jsonObject.toString();
         System.out.println(string);
     }
+
+    @Test
+    public void testArrayAdd() {
+        Vector<Integer> list = new Vector<>();
+
+        new Thread(() -> {
+            for (int i=1; i<=10; ++i) {
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                list.add(i);
+            }
+        }).start();
+        new Thread(() -> {
+            for (int i=11; i<=20; ++i) {
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                list.add(i);
+            }
+        }).start();
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Collections.sort(list);
+        System.out.println(list);
+    }
 }

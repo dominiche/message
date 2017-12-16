@@ -1,9 +1,7 @@
 package dominic.message.rabbit.properties.consume;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Request specific "quality of service" settings.
