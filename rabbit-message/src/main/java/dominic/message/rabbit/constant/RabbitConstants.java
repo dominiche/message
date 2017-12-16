@@ -21,10 +21,6 @@ public interface RabbitConstants {
     String DEFAULT_ENCODING = "UTF-8";
 
     /**
-     * consumer consume method name
-     */
-    String CONSUME_METHOD = "consume";
-    /**
      * consumer interface class name
      */
     String CONSUMER_INTERFACE_NAME = RabbitMessageConsumer.class.getName();

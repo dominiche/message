@@ -13,6 +13,7 @@ import dominic.message.rabbit.properties.consume.ExchangeDeclareProperties;
 import dominic.message.rabbit.properties.consume.QueueDeclareProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -143,24 +144,35 @@ public class Consumer {
                 boolean finalIsList = isList;
                 boolean finalIsSet = isSet;
                 boolean finalIsMap = isMap;
+                boolean isNeedAck = consumePackProperties.isAutoAck();
+                String consumerClassName = consumer.getClass().getName();
                 DefaultConsumer paramConsumer = new DefaultConsumer(channel) {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         String messageJson = new String(body, RabbitConstants.DEFAULT_ENCODING);
                         try {
-                            //todo time log
-                            //todo autoAck...
+                            if (log.isDebugEnabled()) {
+                                log.debug("consumer:{}接收到消息, {}, message：{}", consumerClassName,
+                                        DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"), messageJson);
+                            }
                             Object message = convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
                             RabbitMessageConsumerProperties rabbitMessageConsumerProperties = RabbitMessageConsumerProperties.builder()
                                     .channel(channel).consumerTag(consumerTag).envelope(envelope).properties(properties).build();
                             consumer.consume(message, rabbitMessageConsumerProperties);
+                            if (isNeedAck) {
+                                channel.basicAck(envelope.getDeliveryTag(), false);
+                            }
                         } catch (Exception e) {
-                            log.error("consumer:{}消费消息时发生异常, message:{}", consumer.getClass().getName(), messageJson, e);
+                            log.error("consumer:{}消费消息时发生异常, message:{}", consumerClassName, messageJson, e);
+                            if (isNeedAck) {
+                                log.error("consumer:{}消费异常，消息已经重新入队列，message:{}", consumerClassName, messageJson, e);
+                                channel.basicReject(envelope.getDeliveryTag(), true);
+                            }
                         }
                     }
                 };
                 //channel.basicConsume(...)
-                channel.basicConsume(queue, consumePackProperties.isAutoAck(), consumePackProperties.getConsumerTag(),
+                channel.basicConsume(queue, /*consumePackProperties.isAutoAck()*/false, consumePackProperties.getConsumerTag(),
                         consumePackProperties.isNoLocal(), consumePackProperties.isExclusive(), consumePackProperties.getArguments(),
                         paramConsumer);
             } catch (IOException e) {
