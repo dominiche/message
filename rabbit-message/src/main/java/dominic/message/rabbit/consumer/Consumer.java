@@ -2,6 +2,7 @@ package dominic.message.rabbit.consumer;
 
 import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.rabbitmq.client.*;
 import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ConsumeProperties;
@@ -17,7 +18,13 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Created by Administrator:herongxing on 2017/12/13 21:55.
@@ -53,6 +60,36 @@ public class Consumer {
         }
 
         consumers.forEach(consumer -> {
+            Class clazz;
+            boolean isList = false;
+            boolean isSet = false;
+            boolean isMap = false;
+            Class<? extends RabbitMessageConsumer> aClass = consumer.getClass();
+            Type[] interfaces = aClass.getGenericInterfaces();
+            Type consumeInterface = null;
+            for (Type type : interfaces) {
+                if (type.getTypeName().startsWith(RabbitConstants.CONSUMER_INTERFACE_NAME)) {
+                    consumeInterface = type;
+                    break;
+                }
+            }
+
+            Type type = ((ParameterizedType)consumeInterface).getActualTypeArguments()[0];
+            if (type instanceof ParameterizedType) { //参数化类型
+                String typeName = type.getTypeName();
+                isList = Pattern.matches("^java\\.util\\.[A-Za-z]*List.*$", typeName);
+                isSet = Pattern.matches("^java\\.util\\.[A-Za-z]*Set.*$", typeName);
+                isMap = Pattern.matches("^java\\.util\\.[A-Za-z]*Map.*$", typeName);
+                clazz = (Class)((ParameterizedType)type).getActualTypeArguments()[0];
+            } else if (type instanceof GenericArrayType) { //数组
+                clazz = (Class) type;
+            } else if (type instanceof Class) {
+                clazz = (Class) type;
+            } else {
+                throw new RuntimeException(consumer.getClass().getName()+"consume方法消息体参数：不支持的类型"+type.getTypeName());
+            }
+
+
             ConsumeProperties properties = consumer.consumerProperties();
             String exchange = properties.getExchange();
             if (null == exchange) {
@@ -103,18 +140,17 @@ public class Consumer {
                     channel.basicQos(basicQos.getPrefetchSize(), basicQos.getPrefetchCount(), basicQos.isGlobal());
                 }
                 //assemble consumer
+                boolean finalIsList = isList;
+                boolean finalIsSet = isSet;
+                boolean finalIsMap = isMap;
                 DefaultConsumer paramConsumer = new DefaultConsumer(channel) {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         String messageJson = new String(body, RabbitConstants.DEFAULT_ENCODING);
                         try {
                             //todo time log
-                            //todo assemble RabbitMessageConsumer to paramConsumer
-                            Object message = messageJson;
-                            Class clazz = consumer.getClazz();//Class<T>???
-                            if (!"java.lang.String".equals(clazz.getName())) {
-                                message = JSON.parseObject(messageJson, clazz);//test???
-                            }
+                            //todo autoAck...
+                            Object message = convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
                             RabbitMessageConsumerProperties rabbitMessageConsumerProperties = RabbitMessageConsumerProperties.builder()
                                     .channel(channel).consumerTag(consumerTag).envelope(envelope).properties(properties).build();
                             consumer.consume(message, rabbitMessageConsumerProperties);
@@ -132,5 +168,24 @@ public class Consumer {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private Object convertMessage(String messageJson, boolean finalIsList, Class clazz, boolean finalIsSet, boolean finalIsMap) {
+        Object message = messageJson;
+        if (finalIsList) {
+            message = JSON.parseArray(messageJson, clazz);
+        } else if (finalIsSet) {
+            List list = JSON.parseArray(messageJson, clazz);
+            HashSet<Object> hashSet = Sets.newHashSet();
+            hashSet.addAll(list);
+            message = hashSet;
+        } else if (finalIsMap) {
+            message = JSON.parseObject(messageJson, Map.class);
+        } else {
+            if (!"java.lang.String".equals(clazz.getName())) {
+                message = JSON.parseObject(messageJson, clazz);
+            }
+        }
+        return message;
     }
 }

@@ -1,5 +1,7 @@
 package dominic.message.rabbit.constant;
 
+import dominic.message.rabbit.consumer.RabbitMessageConsumer;
+
 /**
  * Created by Administrator:herongxing on 2017/12/14 14:22.
  */
@@ -17,4 +19,13 @@ public interface RabbitConstants {
      * default encoding
      */
     String DEFAULT_ENCODING = "UTF-8";
+
+    /**
+     * consumer consume method name
+     */
+    String CONSUME_METHOD = "consume";
+    /**
+     * consumer interface class name
+     */
+    String CONSUMER_INTERFACE_NAME = RabbitMessageConsumer.class.getName();
 }
