@@ -67,7 +67,8 @@ public class Producer {
             routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
         }
         try {
-            log.debug("Producer发送消息, {}, message：{}", DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"), JSON.toJSONString(object));
+            log.debug("Producer发送消息, {}, message type:{}, message：{}", DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"),
+                    object.getClass().getName(), JSON.toJSONString(object));
             byte[] body = JSON.toJSONString(object).getBytes(RabbitConstants.DEFAULT_ENCODING);
             channel.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
         } catch (IOException e) {
