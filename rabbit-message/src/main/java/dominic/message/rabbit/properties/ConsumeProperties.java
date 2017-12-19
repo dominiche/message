@@ -78,9 +78,15 @@ public class ConsumeProperties {
     }
 
     public static ConsumeProperties basic(String exchange, String routingKey, boolean autoAck) {
+        if (null == routingKey) {
+            routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
+        }
         return basic(null, exchange, Lists.newArrayList(routingKey), autoAck);
     }
     public static ConsumeProperties basic(String queue, String exchange, String routingKey, boolean autoAck) {
+        if (null == routingKey) {
+            routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
+        }
         return basic(queue, exchange, Lists.newArrayList(routingKey), autoAck);
     }
 
@@ -100,4 +106,33 @@ public class ConsumeProperties {
                 .queueProperties(QueueDeclareProperties.basic())
                 .build();
     }
+
+
+    public static ConsumeProperties durable(String queue, String exchange, String routingKey) {
+        return durable(queue, exchange, routingKey, true);
+    }
+    public static ConsumeProperties durable(String queue, String exchange, String routingKey, boolean autoAck) {
+        if (null == routingKey) {
+            routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
+        }
+        return durable(queue, exchange, Lists.newArrayList(routingKey), autoAck);
+    }
+    public static ConsumeProperties durable(String queue, String exchange, List<String> routingKeys, boolean autoAck) {
+        if (null == exchange) {
+            exchange = RabbitConstants.DEFAULT_EXCHANGE;
+        }
+        if (CollectionUtils.isEmpty(routingKeys)) {
+            routingKeys = Lists.newArrayList(RabbitConstants.DEFAULT_ROUTING_KEY);
+        }
+
+        return ConsumeProperties.builder()
+                .queue(queue)
+                .exchange(exchange)
+                .routingKeys(routingKeys)
+                .consumePackProperties(ConsumePackProperties.basic(autoAck))
+                .exchangeProperties(ExchangeDeclareProperties.durable())
+                .queueProperties(QueueDeclareProperties.durable())
+                .build();
+    }
+
 }

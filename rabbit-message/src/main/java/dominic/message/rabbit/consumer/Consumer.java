@@ -139,7 +139,7 @@ public class Consumer {
                 throw new RuntimeException(str);
             }
             if (null == queue) {
-                queue = exchange+ "_" + routingKeys.get(0);//queue为空时,默认值为exchangeName+"_"+routingKey，是否重复交给rabbit服务器判断
+                queue = exchange+ "_" + routingKeys.get(0);//queue为空时,默认值为exchangeName+"_"+routingKey
                 if (RabbitConstants.DEFAULT_EXCHANGE.equals(exchange)) {
                     queue = routingKeys.get(0);
                 }
@@ -172,7 +172,7 @@ public class Consumer {
                 boolean finalIsList = isList;
                 boolean finalIsSet = isSet;
                 boolean finalIsMap = isMap;
-                boolean isNeedAck = consumePackProperties.isAutoAck();
+                boolean isNeedAck = !consumePackProperties.isAutoAck();
                 String consumerClassName = consumer.getClass().getName();
                 DefaultConsumer paramConsumer = new DefaultConsumer(channel) {
                     @Override

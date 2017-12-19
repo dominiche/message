@@ -8,6 +8,7 @@ import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ProducerProperties;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -66,6 +67,7 @@ public class Producer {
             routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
         }
         try {
+            log.debug("Producer发送消息, {}, message：{}", DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"), JSON.toJSONString(object));
             byte[] body = JSON.toJSONString(object).getBytes(RabbitConstants.DEFAULT_ENCODING);
             channel.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
         } catch (IOException e) {
@@ -74,34 +76,4 @@ public class Producer {
             throw new RuntimeException(e);
         }
     }
-
-//    //todo confirmSelect
-//    //for confirmSelect, confirmCallback, returnCallback
-//    public static void basicPublish(Channel channel, String exchange, String routingKey, Object object) {
-//        basicPublish(channel, exchange, routingKey, object, false);
-//    }
-//    public static void basicPublish(Channel channel, String exchange, String routingKey, Object object, boolean closeChannel) {
-//        basicPublish(channel, exchange, routingKey, null, object, closeChannel);
-//    }
-//    public static void basicPublish(Channel channel, String exchange, String routingKey, ProducerProperties properties, Object object) {
-//        basicPublish(channel, exchange, routingKey, properties, object, false);
-//    }
-//    public static void basicPublish(Channel channel, String exchange, String routingKey, ProducerProperties properties, Object object, boolean closeChannel) {
-//        if (null == channel) {
-//            channel = defaultChannel;
-//            closeChannel = false;
-//        }
-//        if (null == properties) {
-//            properties = ProducerProperties.builder().build();
-//        }
-//        basicPublish(channel, exchange, routingKey, properties.isMandatory(), properties.isImmediate(), properties.getBasicProperties(), object);
-//        if (closeChannel) {
-//            try {
-//                channel.close();
-//            } catch (Exception e) {
-//                log.error("close channel exception: ", e);
-//                throw new RuntimeException(e);
-//            }
-//        }
-//    }
 }

@@ -30,6 +30,10 @@ public class QueueDeclareProperties {
 
     public static QueueDeclareProperties basic() {
         return QueueDeclareProperties.builder().durable(false)
+                .exclusive(false).autoDelete(true).build();
+    }
+    public static QueueDeclareProperties durable() {
+        return QueueDeclareProperties.builder().durable(true)
                 .exclusive(false).autoDelete(false).build();
     }
 }

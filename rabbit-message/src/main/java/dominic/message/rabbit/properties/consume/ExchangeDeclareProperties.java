@@ -36,6 +36,11 @@ public class ExchangeDeclareProperties {
 
     public static ExchangeDeclareProperties basic() {
         return ExchangeDeclareProperties.builder().type(BuiltinExchangeType.DIRECT)
-                .durable(false).autoDelete(false).internal(false).build();
+                .durable(false).autoDelete(true).internal(false).build();
+    }
+
+    public static ExchangeDeclareProperties durable() {
+        return ExchangeDeclareProperties.builder().type(BuiltinExchangeType.DIRECT)
+                .durable(true).autoDelete(false).internal(false).build();
     }
 }
