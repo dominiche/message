@@ -19,9 +19,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
+import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -93,16 +92,22 @@ public class Consumer {
             boolean isSet = false;
             boolean isMap = false;
             Class<? extends RabbitMessageConsumer> aClass = consumer.getClass();
-            Type[] interfaces = aClass.getGenericInterfaces();
-            Type consumeInterface = null;
-            for (Type type : interfaces) {
-                if (type.getTypeName().startsWith(RabbitConstants.CONSUMER_INTERFACE_NAME)) {
-                    consumeInterface = type;
+            java.lang.reflect.Method[] declaredMethods = aClass.getDeclaredMethods();
+            Method consumeMethod = null;
+            for (int i=declaredMethods.length-1; i>=0; --i) {
+                Method method = declaredMethods[i];
+                Parameter[] parameters = method.getParameters();
+                if (RabbitConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 2 == parameters.length
+                        && parameters[1].getType() == RabbitConstants.CONSUMER_PROPERTIES_CLASS) {
+                    consumeMethod = method;
                     break;
                 }
             }
 
-            Type type = ((ParameterizedType)consumeInterface).getActualTypeArguments()[0];
+            if (consumeMethod == null) {
+                throw new RuntimeException(String.format("没有拿到消费者:%s的consume方法", aClass.getName()));
+            }
+            Type type = consumeMethod.getGenericParameterTypes()[0];
             if (type instanceof ParameterizedType) { //参数化类型
                 String typeName = type.getTypeName();
                 isList = Pattern.matches("^java\\.util\\.[A-Za-z]*List.*$", typeName);
@@ -145,7 +150,7 @@ public class Consumer {
                 }
             }
 
-            Channel channel = newChannel(); //todo close channel
+            Channel channel = newChannel();
             channelList.add(channel);
             try {
                 //declare exchange
