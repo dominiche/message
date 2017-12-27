@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.stereotype.Service;
 
@@ -25,10 +26,14 @@ public class Producer {
         try {
             producerProperties = new Properties();
             kafkaProducerProperties.entrySet().forEach(entry -> {
-                String key = (String)entry.getKey();
+                String key = entry.getKey().toString();
                 key = key.replace("-", ".");
-                producerProperties.put(key, entry.getValue());
+                producerProperties.put(key, entry.getValue().toString());
             });
+            Object keySerializer = producerProperties.getOrDefault(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+            Object valueSerializer = producerProperties.getOrDefault(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+            producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySerializer);
+            producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
             kafkaProducer = new KafkaProducer<>(producerProperties);
         } catch (Exception e) {
             log.error("配置kafka producer出错：", e);
