@@ -2,6 +2,7 @@ package dominic.message.kafka.producer;
 
 import com.alibaba.fastjson.JSON;
 import com.google.common.base.Preconditions;
+import dominic.message.kafka.constants.KafkaConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -30,11 +31,12 @@ public class Producer {
                 key = key.replace("-", ".");
                 producerProperties.put(key, entry.getValue().toString());
             });
-            Object keySerializer = producerProperties.getOrDefault(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-            Object valueSerializer = producerProperties.getOrDefault(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+            Object keySerializer = producerProperties.getOrDefault(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, KafkaConstants.DEFAULT_KEY_SERIALIZER);
+            Object valueSerializer = producerProperties.getOrDefault(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaConstants.DEFAULT_VALUE_SERIALIZER);
             producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySerializer);
             producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
             kafkaProducer = new KafkaProducer<>(producerProperties);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> kafkaProducer.close()));
         } catch (Exception e) {
             log.error("配置kafka producer出错：", e);
             throw new RuntimeException("配置kafka producer出错", e);
