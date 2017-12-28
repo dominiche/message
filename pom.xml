@@ -6,8 +6,8 @@
   <artifactId>message</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <modules>
-    <module>rabbit-message</module>
-    <module>kafka-message</module>
+    <module>message-kafka</module>
+    <module>message-rabbit</module>
     <module>message-tool</module>
   </modules>
   <packaging>pom</packaging>
