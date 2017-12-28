@@ -52,6 +52,9 @@ public class Consumer {
         Object valueDeserializer = consumerProperties.getOrDefault(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaConstants.DEFAULT_VALUE_DESERIALIZER);
         consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer);
         consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
+
+        Object maxPollRecords = consumerProperties.getOrDefault(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, KafkaConstants.MAX_POLL_RECORDS);
+        consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, maxPollRecords);
     }
 
     @PostConstruct
@@ -152,7 +155,6 @@ public class Consumer {
                                 log.debug("consumer:{}接收到消息, message：{}", consumerClassName, messageJson);
                                 Object message = convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
                                 consumer.consume(message);
-                                //todo 手工确认??
                             } catch (Exception e) {
                                 log.error("consumer:{}消费消息时发生异常, message:{}", consumerClassName, messageJson, e);
                             }

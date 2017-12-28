@@ -23,6 +23,11 @@ public interface KafkaConstants {
      */
     String DEFAULT_VALUE_DESERIALIZER = DEFAULT_KEY_DESERIALIZER;
 
+    /**
+     * 每次poll获取消息最大条数
+     */
+    String MAX_POLL_RECORDS = "10";
+
 
     /**
      * consume method name
