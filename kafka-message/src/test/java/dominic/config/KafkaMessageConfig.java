@@ -14,9 +14,8 @@ import java.util.Properties;
 @ComponentScan("dominic.message.kafka")
 public class KafkaMessageConfig {
     /**
-     * 如果只有producer，可以只配置kafkaProducerProperties，不需要kafkaConsumerProperties
-     * 反之，如果只有consumer，可以只配置kafkaConsumerProperties，不需要kafkaProducerProperties
-     * （kafka的一些配置是有"."作为连个单词之间的间隔，yml不支持"."间隔，请用"-"作为代替）
+     * 一些配置是有"."作为两个单词之间的间隔，yml不支持"."间隔，请用"-"作为代替
+     * 如:"bootstrap.servers" -> "bootstrap-servers"
      */
 
     @Bean
@@ -25,9 +24,9 @@ public class KafkaMessageConfig {
         return new Properties();
     }
 
-//    @Bean
-//    @ConfigurationProperties(prefix="message.kafka.consumer")
-//    public Properties kafkaConsumerProperties() {
-//        return new Properties();
-//    }
+    @Bean
+    @ConfigurationProperties(prefix="message.kafka.consumer")
+    public Properties kafkaConsumerProperties() {
+        return new Properties();
+    }
 }

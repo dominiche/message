@@ -1,8 +1,6 @@
 package dominic.message.rabbit.consumer;
 
-import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.rabbitmq.client.*;
 import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ConsumeProperties;
@@ -11,6 +9,8 @@ import dominic.message.rabbit.properties.consume.ConsumeBasicQos;
 import dominic.message.rabbit.properties.consume.ConsumePackProperties;
 import dominic.message.rabbit.properties.consume.ExchangeDeclareProperties;
 import dominic.message.rabbit.properties.consume.QueueDeclareProperties;
+import dominic.message.tool.utils.ConsumerUtils;
+import io.vavr.Tuple4;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.joda.time.DateTime;
@@ -19,13 +19,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.lang.reflect.*;
-import java.lang.reflect.Method;
-import java.util.HashSet;
+import java.lang.reflect.Parameter;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
-import java.util.regex.Pattern;
 
 /**
  * Created by Administrator:herongxing on 2017/12/13 21:55.
@@ -87,40 +83,16 @@ public class Consumer {
     private void assembleConsumer() {
         log.debug("开始装配 rabbit-message consumer..........");
         consumers.parallelStream().forEach(consumer -> {
-            Class clazz;
-            boolean isList = false;
-            boolean isSet = false;
-            boolean isMap = false;
-            Class<? extends RabbitMessageConsumer> aClass = consumer.getClass();
-            java.lang.reflect.Method[] declaredMethods = aClass.getDeclaredMethods();
-            Method consumeMethod = null;
-            for (int i=declaredMethods.length-1; i>=0; --i) {
-                Method method = declaredMethods[i];
-                Parameter[] parameters = method.getParameters();
-                if (RabbitConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 2 == parameters.length
-                        && parameters[1].getType() == RabbitConstants.CONSUMER_PROPERTIES_CLASS) {
-                    consumeMethod = method;
-                    break;
-                }
-            }
-
-            if (consumeMethod == null) {
-                throw new RuntimeException(String.format("没有拿到消费者:%s的consume方法", aClass.getName()));
-            }
-            Type type = consumeMethod.getGenericParameterTypes()[0];
-            if (type instanceof ParameterizedType) { //参数化类型
-                String typeName = type.getTypeName();
-                isList = Pattern.matches("^java\\.util\\.[A-Za-z]*List.*$", typeName);
-                isSet = Pattern.matches("^java\\.util\\.[A-Za-z]*Set.*$", typeName);
-                isMap = Pattern.matches("^java\\.util\\.[A-Za-z]*Map.*$", typeName);
-                clazz = (Class)((ParameterizedType)type).getActualTypeArguments()[0];
-            } else if (type instanceof GenericArrayType) { //数组
-                clazz = (Class) type;
-            } else if (type instanceof Class) {
-                clazz = (Class) type;
-            } else {
-                throw new RuntimeException(consumer.getClass().getName()+"consume方法消息体参数：不支持的类型"+type.getTypeName());
-            }
+            Tuple4<Class<?>, Boolean, Boolean, Boolean> tuple4 = ConsumerUtils.consumeParameterType(consumer.getClass(),
+                    method -> {
+                        Parameter[] parameters = method.getParameters();
+                return RabbitConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 2 == parameters.length
+                                && parameters[1].getType() == RabbitConstants.CONSUMER_PROPERTIES_CLASS;
+                    });
+            Class clazz = tuple4._1;
+            boolean finalIsList = tuple4._2;
+            boolean finalIsSet = tuple4._3;
+            boolean finalIsMap = tuple4._4;
 
 
             ConsumeProperties properties = consumer.consumerProperties();
@@ -174,9 +146,6 @@ public class Consumer {
                     channel.basicQos(basicQos.getPrefetchSize(), basicQos.getPrefetchCount(), basicQos.isGlobal());
                 }
                 //assemble consumer
-                boolean finalIsList = isList;
-                boolean finalIsSet = isSet;
-                boolean finalIsMap = isMap;
                 boolean isNeedAck = !consumePackProperties.isAutoAck();
                 String consumerClassName = consumer.getClass().getName();
                 DefaultConsumer paramConsumer = new DefaultConsumer(channel) {
@@ -188,7 +157,7 @@ public class Consumer {
                                 log.debug("consumer:{}接收到消息, {}, message：{}", consumerClassName,
                                         DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"), messageJson);
                             }
-                            Object message = convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
+                            Object message = ConsumerUtils.convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
                             RabbitMessageConsumerProperties rabbitMessageConsumerProperties = RabbitMessageConsumerProperties.builder()
                                     .channel(channel).consumerTag(consumerTag).envelope(envelope).properties(properties).build();
                             consumer.consume(message, rabbitMessageConsumerProperties);
@@ -213,24 +182,5 @@ public class Consumer {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    private Object convertMessage(String messageJson, boolean finalIsList, Class clazz, boolean finalIsSet, boolean finalIsMap) {
-        Object message = messageJson;
-        if (finalIsList) {
-            message = JSON.parseArray(messageJson, clazz);
-        } else if (finalIsSet) {
-            List list = JSON.parseArray(messageJson, clazz);
-            HashSet<Object> hashSet = Sets.newHashSet();
-            hashSet.addAll(list);
-            message = hashSet;
-        } else if (finalIsMap) {
-            message = JSON.parseObject(messageJson, Map.class);
-        } else {
-            if (!"java.lang.String".equals(clazz.getName())) {
-                message = JSON.parseObject(messageJson, clazz);
-            }
-        }
-        return message;
     }
 }

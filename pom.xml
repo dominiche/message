@@ -8,6 +8,7 @@
   <modules>
     <module>rabbit-message</module>
     <module>kafka-message</module>
+    <module>message-tool</module>
   </modules>
   <packaging>pom</packaging>
 
@@ -17,6 +18,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring.version>5.0.2.RELEASE</spring.version>
+    <message.tool>0.1.0-SNAPSHOT</message.tool>
   </properties>
 
   <dependencyManagement>
@@ -109,6 +111,12 @@
         <groupId>org.apache.kafka</groupId>
         <artifactId>kafka-clients</artifactId>
         <version>1.0.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.vavr</groupId>
+        <artifactId>vavr</artifactId>
+        <version>0.9.0</version>
       </dependency>
 
     </dependencies>
