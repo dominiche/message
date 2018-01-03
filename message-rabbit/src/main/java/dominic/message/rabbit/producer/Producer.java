@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.MessageProperties;
 import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ProducerProperties;
 import lombok.NonNull;
@@ -65,6 +66,9 @@ public class Producer {
         }
         if (null == routingKey) {
             routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
+        }
+        if (null == props) {
+            props = MessageProperties.PERSISTENT_TEXT_PLAIN;
         }
         try {
             String messageJson = JSON.toJSONString(object);
