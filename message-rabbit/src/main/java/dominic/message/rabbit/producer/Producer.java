@@ -9,7 +9,6 @@ import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ProducerProperties;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -72,8 +71,7 @@ public class Producer {
         }
         try {
             String messageJson = JSON.toJSONString(object);
-            log.debug("Producer开始发送消息, {}, message type:{}, message：{}", DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"),
-                    object.getClass().getName(), messageJson);
+            log.debug("Producer开始发送消息, message type:{}, message：{}", object.getClass().getName(), messageJson);
             byte[] body = messageJson.getBytes(RabbitConstants.DEFAULT_ENCODING);
             channel.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
             log.debug("rabbit Producer发送消息-完成");

@@ -13,7 +13,6 @@ import dominic.message.tool.utils.ConsumerUtils;
 import io.vavr.Tuple4;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
-import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -86,7 +85,7 @@ public class Consumer {
             Tuple4<Class<?>, Boolean, Boolean, Boolean> tuple4 = ConsumerUtils.consumeParameterType(consumer.getClass(),
                     method -> {
                         Parameter[] parameters = method.getParameters();
-                return RabbitConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 2 == parameters.length
+                        return RabbitConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 2 == parameters.length
                                 && parameters[1].getType() == RabbitConstants.CONSUMER_PROPERTIES_CLASS;
                     });
             Class clazz = tuple4._1;
@@ -101,7 +100,8 @@ public class Consumer {
                 exchange = RabbitConstants.DEFAULT_EXCHANGE;
             }
             List<String> routingKeys = properties.getRoutingKeys();
-            if (CollectionUtils.isEmpty(routingKeys)) routingKeys = Lists.newArrayList(RabbitConstants.DEFAULT_ROUTING_KEY);
+            if (CollectionUtils.isEmpty(routingKeys))
+                routingKeys = Lists.newArrayList(RabbitConstants.DEFAULT_ROUTING_KEY);
             ConsumePackProperties consumePackProperties = properties.getConsumePackProperties();
             if (null == consumePackProperties) consumePackProperties = ConsumePackProperties.basic();
             ExchangeDeclareProperties exchangeProperties = properties.getExchangeProperties();
@@ -116,7 +116,7 @@ public class Consumer {
                 throw new RuntimeException(str);
             }
             if (null == queue) {
-                queue = exchange+ "_" + routingKeys.get(0);//queue为空时,默认值为exchangeName+"_"+routingKey
+                queue = exchange + "_" + routingKeys.get(0);//queue为空时,默认值为exchangeName+"_"+routingKey
                 if (RabbitConstants.DEFAULT_EXCHANGE.equals(exchange)) {
                     queue = routingKeys.get(0);
                 }
@@ -153,10 +153,7 @@ public class Consumer {
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                         String messageJson = new String(body, RabbitConstants.DEFAULT_ENCODING);
                         try {
-                            if (log.isDebugEnabled()) {
-                                log.debug("consumer:{}接收到消息, {}, message：{}", consumerClassName,
-                                        DateTime.now().toString("yyyy-MM-dd HH:mm:ss.sss"), messageJson);
-                            }
+                            log.debug("consumer:{}接收到消息, message：{}", consumerClassName, messageJson);
                             Object message = ConsumerUtils.convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
                             RabbitMessageConsumerProperties rabbitMessageConsumerProperties = RabbitMessageConsumerProperties.builder()
                                     .channel(channel).consumerTag(consumerTag).envelope(envelope).properties(properties).build();
