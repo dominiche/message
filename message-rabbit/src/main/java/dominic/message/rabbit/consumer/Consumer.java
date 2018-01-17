@@ -81,7 +81,7 @@ public class Consumer {
 
     private void assembleConsumer() {
         log.debug("开始装配 rabbit-message consumer..........");
-        consumers.parallelStream().forEach(consumer -> {
+        consumers.forEach(consumer -> {
             Tuple4<Class<?>, Boolean, Boolean, Boolean> tuple4 = ConsumerUtils.consumeParameterType(consumer.getClass(),
                     method -> {
                         Parameter[] parameters = method.getParameters();
