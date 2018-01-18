@@ -1,15 +1,19 @@
 package dominic.message.rabbit.consumer;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.gson.*;
 import com.rabbitmq.client.*;
 import dominic.message.rabbit.constant.RabbitConstants;
+import dominic.message.rabbit.producer.Producer;
 import dominic.message.rabbit.properties.ConsumeProperties;
 import dominic.message.rabbit.properties.RabbitMessageConsumerProperties;
 import dominic.message.rabbit.properties.consume.ConsumeBasicQos;
 import dominic.message.rabbit.properties.consume.ConsumePackProperties;
 import dominic.message.rabbit.properties.consume.ExchangeDeclareProperties;
 import dominic.message.rabbit.properties.consume.QueueDeclareProperties;
+import dominic.message.rabbit.utils.BasicPropertiesUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +23,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * Created by Administrator:herongxing on 2017/12/13 21:55.
@@ -188,15 +189,12 @@ public class Consumer {
                             }
                         } catch (Exception e) {
                             log.error("consumer:{}消费消息时发生异常, message:{}", consumerClassName, messageJson, e);
-                            if (isNeedAck) {
-                                log.error("consumer:{}消费异常，消息已经重新入队列，message:{}", consumerClassName, messageJson, e);
-                                channel.basicReject(envelope.getDeliveryTag(), true);
-                            }
+                            handleConsumeError(envelope, properties, body, messageJson, isNeedAck, channel, consumerClassName);
                         }
                     }
                 };
                 //channel.basicConsume(...)
-                channel.basicConsume(queue, /*consumePackProperties.isAutoAck()*/false, consumePackProperties.getConsumerTag(),
+                channel.basicConsume(queue, consumePackProperties.isAutoAck(), consumePackProperties.getConsumerTag(),
                         consumePackProperties.isNoLocal(), consumePackProperties.isExclusive(), consumePackProperties.getArguments(),
                         paramConsumer);
             } catch (IOException e) {
@@ -204,5 +202,23 @@ public class Consumer {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    private void handleConsumeError(Envelope envelope, AMQP.BasicProperties properties, byte[] body, String messageJson, boolean isNeedAck, Channel channel, String consumerClassName) {
+        if (isNeedAck) {
+            int errorTimes = (int) MoreObjects.firstNonNull(properties.getHeaders(), Maps.newHashMap()).getOrDefault(RabbitConstants.ERROR_RETRY_TIMES, 0);
+            try {
+                channel.basicReject(envelope.getDeliveryTag(), false);
+                if (RabbitConstants.ERROR_RETRY_TIMES_MAX <= errorTimes) {
+                    log.error("{} consume error:over max requeue times:消费异常已超过过最大重入队列次数，不再重入队列，message:{}", consumerClassName, messageJson);
+                } else {
+                    AMQP.BasicProperties newProperties = BasicPropertiesUtils.addHeadersInNew(properties, RabbitConstants.ERROR_RETRY_TIMES, errorTimes+1);
+                    Producer.basicPublishByBytes(channel, envelope.getExchange(), envelope.getRoutingKey(), false, false, newProperties, body);
+                    log.error("consumer:{}消费异常，消息已经重新发送(第{}次)，message:{}", consumerClassName, errorTimes+1, messageJson);
+                }
+            } catch (IOException e1) {
+                log.error("consumer:{}拒绝消息时异常", consumerClassName, e1);
+            }
+        }
     }
 }

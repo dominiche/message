@@ -29,4 +29,13 @@ public interface RabbitConstants {
      * consumerPropertiesClass
      */
     Class<RabbitMessageConsumerProperties> CONSUMER_PROPERTIES_CLASS = RabbitMessageConsumerProperties.class;
+
+    /**
+     * 消费消息时出现错误时，重新入队列的最大次数-key
+     */
+    String ERROR_RETRY_TIMES = "ERROR_RETRY_TIMES";
+    /**
+     * 消费消息时出现错误时，重新入队列的最大次数-key
+     */
+    int ERROR_RETRY_TIMES_MAX = 10;
 }

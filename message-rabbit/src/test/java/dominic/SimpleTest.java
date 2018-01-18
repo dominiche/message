@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import dominic.message.rabbit.properties.consume.ConsumeBasicQos;
 import org.junit.Test;
@@ -110,9 +110,25 @@ public class SimpleTest {
 
     @Test
     public void testGSON(){
-        String json = "[{\"key\":\"key1\",\"value\":\"value1\"},{\"key\":\"key2\",\"value\":\"value2\"}]";
-        Type listType = new TypeToken<LinkedList<Object>>(){}.getType();
-        Gson gson = new Gson();
+        GsonBuilder builder = new GsonBuilder();
+        // Register an adapter to manage the date types as long values
+        builder.registerTypeAdapter(Date.class, new JsonDeserializer<Date>() {
+            public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                return new Date(json.getAsJsonPrimitive().getAsLong());
+            }
+        });
+        builder.registerTypeAdapter(Date.class, new JsonSerializer<Date>() {
+            public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext context) throws JsonParseException {
+                return new JsonPrimitive(src.getTime());
+            }
+        });
+        Gson gson = builder.create();
+
+//        Gson gson = new Gson();
+
+
+        String json = "[{\"key\":\"key1\",\"value\":\"1514514945000\"},{\"key\":\"key2\",\"value\":\"1514514945000\"}]";
+        Type listType = new TypeToken<LinkedList<A>>(){}.getType();
         LinkedList<A> la = gson.fromJson(json, listType);
         System.out.println(la.size());
         System.out.println("=========:" + gson.toJson(la));
@@ -120,7 +136,7 @@ public class SimpleTest {
 
     class A {
         private String key;
-        private String value;
+        private Date value;
 
         public String getKey() {
             return key;
@@ -130,11 +146,11 @@ public class SimpleTest {
             this.key = key;
         }
 
-        public String getValue() {
+        public Date getValue() {
             return value;
         }
 
-        public void setValue(String value) {
+        public void setValue(Date value) {
             this.value = value;
         }
     }

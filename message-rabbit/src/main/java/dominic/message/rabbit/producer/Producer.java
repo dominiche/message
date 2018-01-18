@@ -58,7 +58,7 @@ public class Producer {
         basicPublish(defaultChannel, exchange, routingKey, properties.isMandatory(), properties.isImmediate(), properties.getBasicProperties(), object);
     }
 
-    private static void basicPublish(Channel channel, String exchange, String routingKey,
+    public static void basicPublish(Channel channel, String exchange, String routingKey,
                                      boolean mandatory, boolean immediate, AMQP.BasicProperties props, @NonNull Object object) {
         if (null == exchange) {
             exchange = RabbitConstants.DEFAULT_EXCHANGE;
@@ -78,6 +78,26 @@ public class Producer {
         } catch (IOException e) {
             log.error("send message exception!exchange={}, routingKey={}, mandatory={}, BasicProperties={}, message:{};",
                     exchange, routingKey, mandatory, props, JSON.toJSONString(object), e);
+        }
+    }
+
+    public static void basicPublishByBytes(Channel channel, String exchange, String routingKey,
+                                     boolean mandatory, boolean immediate, AMQP.BasicProperties props, @NonNull byte[] body) {
+        if (null == exchange) {
+            exchange = RabbitConstants.DEFAULT_EXCHANGE;
+        }
+        if (null == routingKey) {
+            routingKey = RabbitConstants.DEFAULT_ROUTING_KEY;
+        }
+        if (null == props) {
+            props = MessageProperties.PERSISTENT_TEXT_PLAIN;
+        }
+        try {
+            channel.basicPublish(exchange, routingKey, mandatory, immediate, props, body);
+            log.debug("rabbit Producer发送消息-完成");
+        } catch (IOException e) {
+            log.error("send message exception!exchange={}, routingKey={}, mandatory={}, BasicProperties={}, message(bytes):{};",
+                    exchange, routingKey, mandatory, props, JSON.toJSONString(body), e);
         }
     }
 }

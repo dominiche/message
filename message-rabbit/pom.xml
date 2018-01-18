@@ -8,7 +8,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>message.rabbit</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.6.0_retry_limit-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>rabbit.message</name>
