@@ -4,9 +4,12 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import dominic.message.rabbit.properties.consume.ConsumeBasicQos;
 import org.junit.Test;
 
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -103,5 +106,36 @@ public class SimpleTest {
         }
         Collections.sort(list);
         System.out.println(list);
+    }
+
+    @Test
+    public void testGSON(){
+        String json = "[{\"key\":\"key1\",\"value\":\"value1\"},{\"key\":\"key2\",\"value\":\"value2\"}]";
+        Type listType = new TypeToken<LinkedList<Object>>(){}.getType();
+        Gson gson = new Gson();
+        LinkedList<A> la = gson.fromJson(json, listType);
+        System.out.println(la.size());
+        System.out.println("=========:" + gson.toJson(la));
+    }
+
+    class A {
+        private String key;
+        private String value;
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
     }
 }
