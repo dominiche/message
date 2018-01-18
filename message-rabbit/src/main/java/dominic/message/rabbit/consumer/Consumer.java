@@ -1,7 +1,7 @@
 package dominic.message.rabbit.consumer;
 
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.rabbitmq.client.*;
 import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.properties.ConsumeProperties;
@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
@@ -101,7 +102,16 @@ public class Consumer {
             if (type == null) {
                 throw new RuntimeException(String.format("没有拿到消费者:%s的consume方法", aClass.getName()));
             }
-            Gson gson = new Gson();
+
+            GsonBuilder builder = new GsonBuilder();
+            // Register an adapter to manage the date types as long values
+            builder.registerTypeAdapter(Date.class, new JsonDeserializer<Date>() {
+                public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                    return new Date(json.getAsJsonPrimitive().getAsLong());
+                }
+            });
+
+            Gson gson = builder.create();
 
 
             ConsumeProperties properties = consumer.consumerProperties();
