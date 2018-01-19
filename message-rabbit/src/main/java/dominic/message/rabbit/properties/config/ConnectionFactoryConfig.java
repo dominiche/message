@@ -4,6 +4,7 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Address;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import dominic.message.rabbit.properties.ConsumerErrorPolicy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
@@ -71,6 +72,11 @@ public class ConnectionFactoryConfig {
 
 
     private String addresses;
+
+    /**
+     * 消费消息出错时的处理
+     */
+    private ConsumerErrorPolicy errorPolicy;
 
     public static ConnectionFactory getConnectionFactory(ConnectionFactoryConfig config) {
         ConnectionFactory connectionFactory = new ConnectionFactory();
