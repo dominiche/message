@@ -14,13 +14,14 @@ import java.util.Properties;
 
 /**
  * Created by Administrator:herongxing on 2018/1/19 9:50.
+ * @link http://blog.csdn.net/xietansheng/article/details/51673073
  */
 @Slf4j
 public class MailHelper {
 
     private MailProperties mailProperties;
 
-    MailHelper(MailProperties mailProperties) {
+    public MailHelper(MailProperties mailProperties) {
         this.mailProperties = mailProperties;
     }
 
@@ -49,6 +50,8 @@ public class MailHelper {
             // 7. 关闭连接
             transport.close();
 
+            log.debug("邮件发送成功，subject:{}", subject);
+
         } catch (Exception e) {
             log.error("发送邮件失败，subject：{}", subject, e);
         }
@@ -61,13 +64,11 @@ public class MailHelper {
         MimeMessage message = new MimeMessage(session);
 
         // 2. From: 发件人（昵称有广告嫌疑，避免被邮件服务器误认为是滥发广告以至返回失败，请修改昵称）
-        message.setFrom(new InternetAddress(mailProperties.getSenderMail(), "rabbit小助手", "UTF-8"));
+        message.setFrom(new InternetAddress(mailProperties.getSenderMail(), "提醒小助手", "UTF-8"));
 
         // 3. To: 收件人（可以增加多个收件人、抄送、密送）
         String receivers = mailProperties.getReceivers();
         message.addRecipients(MimeMessage.RecipientType.TO, receivers);
-
-//        message.setRecipient(MimeMessage.RecipientType.TO, new InternetAddress(receiveMail, "XX用户", "UTF-8"));
 
         // 4. Subject: 邮件主题（标题有广告嫌疑，避免被邮件服务器误认为是滥发广告以至返回失败，请修改标题）
         message.setSubject(subject, "UTF-8");

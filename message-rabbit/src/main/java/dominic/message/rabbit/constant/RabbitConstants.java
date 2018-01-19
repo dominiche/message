@@ -38,4 +38,8 @@ public interface RabbitConstants {
      * 消费消息时出现错误时，重新入队列的最大次数-key
      */
     int ERROR_RETRY_TIMES_MAX = 10;
+    /**
+     * 消费消息时出现错误时，无限次数重试
+     */
+    int ERROR_RETRY_TIMES_LIMITLESS = -1;
 }

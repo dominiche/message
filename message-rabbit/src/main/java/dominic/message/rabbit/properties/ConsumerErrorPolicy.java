@@ -1,5 +1,6 @@
 package dominic.message.rabbit.properties;
 
+import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.tool.helper.mail.MailProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,4 +34,13 @@ public class ConsumerErrorPolicy {
      * 邮件提醒配置
      */
     private MailProperties mail;
+
+
+    public static ConsumerErrorPolicy defaultPolicy() {
+        return ConsumerErrorPolicy.builder()
+                .retry(RabbitConstants.ERROR_RETRY_TIMES_LIMITLESS)
+                .remind(false)
+                .mail(null)
+                .build();
+    }
 }

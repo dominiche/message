@@ -8,14 +8,20 @@ import com.rabbitmq.client.*;
 import dominic.message.rabbit.constant.RabbitConstants;
 import dominic.message.rabbit.producer.Producer;
 import dominic.message.rabbit.properties.ConsumeProperties;
+import dominic.message.rabbit.properties.ConsumerErrorPolicy;
 import dominic.message.rabbit.properties.RabbitMessageConsumerProperties;
+import dominic.message.rabbit.properties.config.ConnectionFactoryConfig;
 import dominic.message.rabbit.properties.consume.ConsumeBasicQos;
 import dominic.message.rabbit.properties.consume.ConsumePackProperties;
 import dominic.message.rabbit.properties.consume.ExchangeDeclareProperties;
 import dominic.message.rabbit.properties.consume.QueueDeclareProperties;
 import dominic.message.rabbit.utils.BasicPropertiesUtils;
+import dominic.message.tool.helper.mail.MailHelper;
+import dominic.message.tool.helper.mail.MailProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +44,12 @@ public class Consumer {
 
     @Autowired(required = false)
     private List<RabbitMessageConsumer> consumers = Lists.newArrayList();
+
+    @Autowired
+    private ConnectionFactoryConfig config;
+    private ConsumerErrorPolicy errorPolicy;
+    private boolean retryLimitLess;
+    private MailHelper mailHelper = null;
 
 
     public Consumer(Connection rabbitMessageConnection) throws IOException {
@@ -84,6 +96,9 @@ public class Consumer {
 
     private void assembleConsumer() {
         log.debug("开始装配 rabbit-message consumer..........");
+
+        initMailProperties();
+
         consumers.forEach(consumer -> {
             Class<? extends RabbitMessageConsumer> aClass = consumer.getClass();
             java.lang.reflect.Method[] declaredMethods = aClass.getDeclaredMethods();
@@ -171,6 +186,7 @@ public class Consumer {
                 String consumerClassName = consumer.getClass().getName();
                 Type finalType = type;
                 String typeName = finalType.getTypeName();
+                String finalExchange = exchange;
                 DefaultConsumer paramConsumer = new DefaultConsumer(channel) {
                     @Override
                     public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
@@ -189,7 +205,7 @@ public class Consumer {
                             }
                         } catch (Exception e) {
                             log.error("consumer:{}消费消息时发生异常, message:{}", consumerClassName, messageJson, e);
-                            handleConsumeError(envelope, properties, body, messageJson, isNeedAck, channel, consumerClassName);
+                            handleConsumeError(envelope, properties, body, messageJson, isNeedAck, channel, consumerClassName, finalExchange);
                         }
                     }
                 };
@@ -204,21 +220,69 @@ public class Consumer {
         });
     }
 
-    private void handleConsumeError(Envelope envelope, AMQP.BasicProperties properties, byte[] body, String messageJson, boolean isNeedAck, Channel channel, String consumerClassName) {
-        if (isNeedAck) {
-            int errorTimes = (int) MoreObjects.firstNonNull(properties.getHeaders(), Maps.newHashMap()).getOrDefault(RabbitConstants.ERROR_RETRY_TIMES, 0);
-            try {
-                channel.basicReject(envelope.getDeliveryTag(), false);
-                if (RabbitConstants.ERROR_RETRY_TIMES_MAX <= errorTimes) {
-                    log.error("{} consume error:over max requeue times:消费异常已超过过最大重入队列次数，不再重入队列，message:{}", consumerClassName, messageJson);
+    private void handleConsumeError(Envelope envelope, AMQP.BasicProperties properties, byte[] body, String messageJson, boolean isNeedAck, Channel channel, String consumerClassName, String exchange) {
+        try {
+            if (isNeedAck) {
+                if (retryLimitLess) {
+                    try {
+                        channel.basicReject(envelope.getDeliveryTag(), true);
+                    } catch (IOException e) {
+                        log.error("consumer:{}拒绝消息时异常", consumerClassName, e);
+                    }
                 } else {
-                    AMQP.BasicProperties newProperties = BasicPropertiesUtils.addHeadersInNew(properties, RabbitConstants.ERROR_RETRY_TIMES, errorTimes+1);
-                    Producer.basicPublishByBytes(channel, envelope.getExchange(), envelope.getRoutingKey(), false, false, newProperties, body);
-                    log.error("consumer:{}消费异常，消息已经重新发送(第{}次)，message:{}", consumerClassName, errorTimes+1, messageJson);
+                    int errorTimes = (int) MoreObjects.firstNonNull(properties.getHeaders(), Maps.newHashMap()).getOrDefault(RabbitConstants.ERROR_RETRY_TIMES, 0);
+                    try {
+                        channel.basicReject(envelope.getDeliveryTag(), false);
+                        if (errorPolicy.getRetry() <= errorTimes) {
+                            log.error("{} consume error:over max requeue times:消费异常已超过过最大重试次数，不再重试，message:{}", consumerClassName, messageJson);
+                            sendMail(envelope, exchange, messageJson, consumerClassName);
+                        } else {
+                            AMQP.BasicProperties newProperties = BasicPropertiesUtils.addHeadersInNew(properties, RabbitConstants.ERROR_RETRY_TIMES, errorTimes+1);
+                            Producer.basicPublishByBytes(channel, envelope.getExchange(), envelope.getRoutingKey(), false, false, newProperties, body);
+                            log.error("consumer:{}消费异常，消息已经重新发送(第{}次)，message:{}", consumerClassName, errorTimes+1, messageJson);
+                        }
+                    } catch (IOException e1) {
+                        log.error("consumer:{}拒绝消息时异常", consumerClassName, e1);
+                    }
                 }
-            } catch (IOException e1) {
-                log.error("consumer:{}拒绝消息时异常", consumerClassName, e1);
+            }
+        } catch (Exception e) {
+            log.error("consumer:{}处理消费错误时异常", consumerClassName, e);
+        }
+    }
+
+    private void sendMail(Envelope envelope, String exchange, String messageJson, String consumerClassName) {
+        if (errorPolicy.getRemind() && null != mailHelper) {
+            String subject = "消息消费异常提醒-" + DateTime.now().toString("yyyy-MM-dd HH:mm:ss");
+            String content = String.format("消费者：<strong>%s</strong>, 消费消息异常已超过最大重试次数(%d)!<br/> " +
+                            "exchange: <strong>%s</strong> <br/> routingKey: <strong>%s</strong> <br/><br/> <strong>消息</strong>：<br/>%s",
+                    consumerClassName, errorPolicy.getRetry(), exchange, envelope.getRoutingKey(), messageJson);
+            mailHelper.sendMail(subject, content);
+        }
+    }
+
+    private void initMailProperties() {
+        this.errorPolicy = config.getErrorPolicy();
+        if (null == this.errorPolicy) {
+            this.errorPolicy = ConsumerErrorPolicy.defaultPolicy();
+        }
+        Integer retry = MoreObjects.firstNonNull(errorPolicy.getRetry(), RabbitConstants.ERROR_RETRY_TIMES_MAX);
+        retryLimitLess = retry < 0;
+        Boolean remind = MoreObjects.firstNonNull(errorPolicy.getRemind(), true);
+        MailProperties mail = errorPolicy.getMail();
+        if (null == mail) {
+            remind = false;
+        } else {
+            if (StringUtils.isBlank(mail.getReceivers())
+                    || StringUtils.isBlank(mail.getSenderHost())
+                    || StringUtils.isBlank(mail.getSenderMail())
+                    || StringUtils.isBlank(mail.getSenderMailPassword())) {
+                remind = false;
+            } else {
+                mailHelper = new MailHelper(mail);
             }
         }
+        errorPolicy.setRetry(retry);
+        errorPolicy.setRemind(remind);
     }
 }
