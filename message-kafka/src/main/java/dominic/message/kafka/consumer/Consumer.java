@@ -1,9 +1,8 @@
 package dominic.message.kafka.consumer;
 
 import com.google.common.collect.Lists;
+import com.google.gson.*;
 import dominic.message.kafka.constants.KafkaConstants;
-import dominic.message.tool.utils.ConsumerUtils;
-import io.vavr.Tuple4;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
@@ -16,10 +15,8 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Properties;
-import java.util.Vector;
+import java.lang.reflect.Type;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -101,12 +98,31 @@ public class Consumer {
         executorService = Executors.newFixedThreadPool(size);
 
         consumers.forEach(consumer -> {
-            Tuple4<Class<?>, Boolean, Boolean, Boolean> tuple4 = ConsumerUtils.consumeParameterType(consumer.getClass(),
-                    method -> KafkaConstants.CONSUME_METHOD_NAME.equals(method.getName()) && 1 == method.getParameters().length);
-            Class clazz = tuple4._1;
-            boolean finalIsList = tuple4._2;
-            boolean finalIsSet = tuple4._3;
-            boolean finalIsMap = tuple4._4;
+            Class<? extends KafkaMessageConsumer> aClass = consumer.getClass();
+            java.lang.reflect.Method[] declaredMethods = aClass.getDeclaredMethods();
+            Type type = null;
+            for (int i=declaredMethods.length-1; i>=0; --i) {
+                java.lang.reflect.Method method = declaredMethods[i];
+                if (KafkaConstants.CONSUME_METHOD_NAME.equals(method.getName()) &&1 == method.getParameters().length) {
+                    type = method.getGenericParameterTypes()[0];
+                    if (!Objects.equals(type.getTypeName(), "java.lang.Object")) {
+                        break;
+                    }
+                }
+            }
+
+            if (type == null) {
+                throw new RuntimeException(String.format("没有拿到消费者:%s的consume方法", aClass.getName()));
+            }
+
+            GsonBuilder builder = new GsonBuilder();
+            // Register an adapter to manage the date types as long values
+            builder.registerTypeAdapter(Date.class, new JsonDeserializer<Date>() {
+                public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+                    return new Date(json.getAsJsonPrimitive().getAsLong());
+                }
+            });
+            Gson gson = builder.create();
 
             try {
                 //assemble consumer
@@ -116,6 +132,9 @@ public class Consumer {
                 checkTopics(consumerClassName, topics);
                 kafkaConsumer.subscribe(topics);
                 kafkaConsumerList.add(kafkaConsumer);
+
+                Type finalType = type;
+                String typeName = finalType.getTypeName();
                 executorService.execute(() -> {
                     while (true) {
                         ConsumerRecords<String, String> records = kafkaConsumer.poll(pollTimeout);
@@ -123,7 +142,10 @@ public class Consumer {
                             String messageJson = record.value();
                             try {
                                 log.debug("consumer:{}接收到消息, message：{}", consumerClassName, messageJson);
-                                Object message = ConsumerUtils.convertMessage(messageJson, finalIsList, clazz, finalIsSet, finalIsMap);
+                                Object message = messageJson;
+                                if (!Objects.equals(typeName, "java.lang.Object") && !Objects.equals(typeName, "java.lang.String")) {
+                                    message = gson.fromJson(messageJson, finalType);
+                                }
                                 consumer.consume(message);
                             } catch (Exception e) {
                                 log.error("consumer:{}消费消息时发生异常, message:{}", consumerClassName, messageJson, e);
