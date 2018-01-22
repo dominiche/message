@@ -11,7 +11,7 @@
     <version>0.6.0_retry_limit-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>rabbit.message</name>
+    <name>message.rabbit</name>
     <url>http://maven.apache.org</url>
 
     <properties>

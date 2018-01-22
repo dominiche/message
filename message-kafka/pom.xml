@@ -11,7 +11,7 @@
     <version>0.4.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>kafka.message</name>
+    <name>message.kafka</name>
     <url>http://maven.apache.org</url>
 
     <properties>
