@@ -52,18 +52,18 @@ message:
             bootstrap-servers: #你的kafka服务端地址，多个地址间用英文逗号分隔
             group-id: message-demo   #group-id是当前应用的消费group的名字，防止同一个应用重复消费消息
 ```
-以上是yml文件的配置方式，可以改成properties文件的配置：
+以上是yml文件的配置方式，也可以用properties文件方式的配置：
 ```propterties
-message.kafka.producer.bootstrap-servers = #你的kafka服务端地址，多个地址间用英文逗号分隔
+message.kafka.producer.bootstrap-servers = 你的kafka服务端地址，多个地址间用英文逗号分隔
 message.kafka.producer.acks = 1
 message.kafka.producer.retries = 0
 
-message.kafka.consumer.bootstrap-servers = #你的kafka服务端地址，多个地址间用英文逗号分隔
+message.kafka.consumer.bootstrap-servers = 你的kafka服务端地址，多个地址间用英文逗号分隔
 message.kafka.consumer.group-id = message-demo
 ```
 3. 使用
 * 消费者
-继承KafkaMessageConsumer接口即可，message-kafka接到消息后会自动解析json成消费者的泛型类型，如消息体是String类型的：
+实现KafkaMessageConsumer接口即可，message-kafka接到消息后会自动解析json成消费者的泛型类型，如消息体是String类型的：
 ```java
 @Service
 public class KafkaTestConsumer implements KafkaMessageConsumer<String> {
@@ -134,8 +134,8 @@ InvoiceConsumerDTO(invoiceId=123, subItemList=[InvoiceConsumerSubItemDTO(subNumb
 ```
 
 相关源码在message-demo项目，直通车：
-[KafkaInvoiceConsumer]()
-[KafkaMessageTest]()
+- [KafkaInvoiceConsumer](https://github.com/dominiche/message/blob/master/message-demo/src/main/java/dominic/mq/consumer/kafka/KafkaInvoiceConsumer.java)
+- [KafkaMessageTest](https://github.com/dominiche/message/blob/master/message-demo/src/test/java/dominic/test/KafkaMessageTest.java)
 
 ## 注意事项
 * message-kafka的消息体都会序列化成json，消费端会根据KafkaMessageConsumer的consume方法参数泛型，
@@ -143,6 +143,6 @@ InvoiceConsumerDTO(invoiceId=123, subItemList=[InvoiceConsumerSubItemDTO(subNumb
 * KafkaMessageConsumer的consume方法上不能加事务注解`@Transactional`，
 因为spring事务的实现方式是通过动态生成一个子类，在该方法前后加上事务的处理来达成的，
 这个生成的子类的泛型信息不会被保留，直接是Object类型了，所以无法将json序列化成原来的泛型类型。
-如果是必须加事务的话，可以把consume方法的参数泛型类型设置为String或Object类型，然后在方法里自己解析即可；
+如果是必须加事务的话，可以把consume方法的参数类型设置为String或Object类型，然后在方法里自己解析即可；
 对于String或Object类型的泛型参数，message-kafka会保留原来的json格式，让用户自己反序列化。
 遇到message-kafka无法识别的复杂类型也可以通过把类型设为String或Object，自己解析json的方式来解决。

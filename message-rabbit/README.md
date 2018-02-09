@@ -49,7 +49,7 @@ spring:
                 sender-mail:        #需要邮件提醒的话可以加上发送者账号和密码，否则不会发送邮件提醒
                 sender-mail-password:
 ```
-以上是yml文件的配置方式，可以改成properties文件的配置：
+以上是yml文件的配置方式，也可以用properties文件方式的配置：
 ```propterties
 #spring.rabbitmq.host = localhost
 #spring.rabbitmq.port = 5672
@@ -65,7 +65,7 @@ spring.rabbitmq.error-policy.mail.sender-mail-password =
 ```
 3. 使用
 * 消费者
-继承RabbitMessageConsumer接口即可，message-rabbit接到消息后会自动解析json成消费者的泛型类型，如消息体是String类型的：
+实现RabbitMessageConsumer接口即可，message-rabbit接到消息后会自动解析json成消费者的泛型类型，如消息体是String类型的：
 ```java
 @Service
 public class RabbitTestConsumer implements RabbitMessageConsumer<String> {
@@ -131,11 +131,12 @@ invoiceId=789
 InvoiceConsumerDTO(invoiceId=789, subItemList=[InvoiceConsumerSubItemDTO(subNumber=IV-789, itemCash=100.12), InvoiceConsumerSubItemDTO(subNumber=IV-321, itemCash=12.11)])
 ```
 
-**message-rabbit可以设置消息消费出错时的处理策略，包括重试次数和邮件提醒**
 
 相关源码在message-demo项目，直通车：
-[RabbitInvoiceConsumer]()
-[RabbitMessageTest]()
+- [RabbitInvoiceConsumer](https://github.com/dominiche/message/blob/master/message-demo/src/main/java/dominic/mq/consumer/rabbit/RabbitInvoiceConsumer.java)
+- [RabbitMessageTest](https://github.com/dominiche/message/blob/master/message-demo/src/test/java/dominic/test/RabbitMessageTest.java)
+
+**message-rabbit可以设置消息消费出错时的处理策略，包括重试次数和邮件提醒，在配置文件中设置**
 
 ## 注意事项
 * message-rabbit的消息体都会序列化成json，消费端会根据RabbitMessageConsumer的consume方法参数泛型，
@@ -143,6 +144,6 @@ InvoiceConsumerDTO(invoiceId=789, subItemList=[InvoiceConsumerSubItemDTO(subNumb
 * RabbitMessageConsumer的consume方法上不能加事务注解`@Transactional`，
 因为spring事务的实现方式是通过动态生成一个子类，在该方法前后加上事务的处理来达成的，
 这个生成的子类的泛型信息不会被保留，直接是Object类型了，所以无法将json序列化成原来的泛型类型。
-如果是必须加事务的话，可以把consume方法的参数泛型类型设置为String或Object类型，然后在方法里自己解析即可；
+如果是必须加事务的话，可以把consume方法的参数类型设置为String或Object类型，然后在方法里自己解析即可；
 对于String或Object类型的泛型参数，message-rabbit会保留原来的json格式，让用户自己反序列化。
 遇到message-rabbit无法识别的复杂类型也可以通过把类型设为String或Object，自己解析json的方式来解决。
