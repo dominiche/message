@@ -1,0 +1,40 @@
+server:
+    port: 8081
+    context-path:
+
+logging:
+    config: classpath:logback-spring.xml
+    level:
+        org.apache.mybatis: DEBUG
+        org.spring.framework: DEBUG
+
+spring:
+    application:
+        name: message-demo
+
+    rabbitmq:
+#        host: localhost #单个地址时可以host和port分开配置
+#        port: 5672
+        addresses: localhost:5672  #多个地址间用英文逗号分隔
+        username:     #用户名
+        password:     #密码
+        error-policy:
+            retry: 10       #最大重试次数。小于0的整数：无限重试；0：不重试；大于0的整数n:重试n次
+            remind: true     #超过最大重试次数后是否需要邮件提醒
+            mail:
+                receivers:                      #需要接收消息消费异常邮件提醒的邮箱账号
+                sender-host:                    #邮件发送者账号的smtp服务器地址
+                sender-mail:                    #需要邮件提醒的话可以加上发送者账号和密码，否则不会发送邮件提醒
+                sender-mail-password:
+
+
+message:
+    kafka:
+        producer:
+            bootstrap-servers:      #你的kafka服务端地址，多个地址间用英文逗号分隔
+            acks: 1
+            retries: 0
+
+        consumer:
+            bootstrap-servers:      #你的kafka服务端地址，多个地址间用英文逗号分隔
+            group-id: message-demo  #group-id是当前应用的消费group的名字，防止同一个应用重复消费消息

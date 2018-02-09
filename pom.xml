@@ -9,6 +9,7 @@
     <module>message-kafka</module>
     <module>message-rabbit</module>
     <module>message-tool</module>
+    <module>message-demo</module>
   </modules>
   <packaging>pom</packaging>
 
@@ -151,7 +152,6 @@
         </configuration>
       </plugin>
 
-      <!--   要将源码放上去，需要加入这个插件    -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -171,16 +171,4 @@
     </plugins>
   </build>
 
-  <distributionManagement>
-    <repository>
-      <id>releases</id>
-      <name>Nexus Releasse Repository</name>
-      <url>http://10.0.2.101:8081/nexus/content/repositories/release</url>
-    </repository>
-    <snapshotRepository>
-      <id>snapshots</id>
-      <name>Nexus Snapshots Repository</name>
-      <url>http://10.0.2.101:8081/nexus/content/repositories/snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
 </project>
