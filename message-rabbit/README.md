@@ -91,7 +91,7 @@ Producer.send("message.rabbit", "message.rabbit.test", message);
 "message.rabbit"是消息的交换器，"message.rabbit.test"是要发送的消息的routingKey，message是要发送的消息
 
 ## 使用举例
-1. 消费者
+1. 消费者 <br/>
 消息体类型是InvoiceConsumerDTO：
 ```java
 @Service
@@ -117,7 +117,7 @@ InvoiceConsumerDTO invoiceConsumerDTO = InvoiceConsumerDTO.builder().invoiceId(7
 Producer.send("message.rabbit", "message.rabbit.invoice", invoiceConsumerDTO);
 ```
 
-3. 日志打印
+3. 日志打印 <br/>
 发送消息的日志
 ```
 2018-02-09 15:00:49.343 [main] DEBUG d.message.rabbit.producer.Producer - Producer开始发送消息, message type:dominic.dto.InvoiceConsumerDTO, message：{"invoiceId":789,"subItemList":[{"itemCash":100.12,"subNumber":"IV-789"},{"itemCash":12.11,"subNumber":"IV-321"}]}

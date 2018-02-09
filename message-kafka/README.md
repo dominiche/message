@@ -93,7 +93,7 @@ Producer.send("message.kafka.test", message);
 "message.kafka.test"是topic，message是要发送的消息
 
 ## 使用举例
-1. 消费者
+1. 消费者 <br/>
 消息体类型是InvoiceConsumerDTO：
 ```java
 @Service
@@ -119,7 +119,7 @@ InvoiceConsumerDTO invoiceConsumerDTO = InvoiceConsumerDTO.builder().invoiceId(1
 Producer.send("message.kafka.invoice", invoiceConsumerDTO);
 ```
 
-3. 日志打印
+3. 日志打印 <br/>
 发送消息的日志
 ```
 2018-02-09 11:44:17.480 [main] DEBUG d.message.kafka.producer.Producer - Producer开始发送消息, message type:dominic.dto.InvoiceConsumerDTO, message：{"invoiceId":123,"subItemList":[{"itemCash":100.12,"subNumber":"IV-123"},{"itemCash":12.11,"subNumber":"IV-456"}]}
